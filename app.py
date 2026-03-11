@@ -11,7 +11,6 @@ from htmlTemplates import css, bot_template, user_template
 from langchain import HuggingFacePipeline
 from langchain.llms import LlamaCpp
 
-
 def get_pdf_text(pdf_docs):
     text = ""
     for pdf in pdf_docs:
