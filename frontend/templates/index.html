@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>test</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <aside class="sidebar">
+            <h2>sidebar</h2>
+
+            <label for="pdfUpload" class="section-title">Upload PDF(s)</label>
+            <input type="file" id="pdfUpload" multiple accept=".pdf">
+
+            <button id="processBtn">Process PDFs</button>
+
+            <div id="statusBox" class="status-box">No files uploaded.</div>
+            <div id="fileList" class="file-list"></div>
+        </aside>
+
+        <main class="chat-area">
+            <div id="chatBox" class="chat-box"></div>
+
+            <div class="input-row">
+                <input type="text" id="userInput" placeholder="Ask a question about your PDFs...">
+                <button id="sendBtn">Send</button>
+            </div>
+        </main>
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
