@@ -8,8 +8,10 @@ from langchain.chat_models import ChatOpenAI
 from langchain.memory import ConversationBufferMemory
 from langchain.chains import ConversationalRetrievalChain
 from htmlTemplates import css, bot_template, user_template
-from langchain import HuggingFacePipeline
+from langchain.llms import HuggingFacePipeline
 from langchain.llms import LlamaCpp
+from langchain_groq import ChatGroq
+
 
 def get_pdf_text(pdf_docs):
     text = ""
@@ -23,8 +25,8 @@ def get_pdf_text(pdf_docs):
 def get_text_chunks(text):
     text_splitter = CharacterTextSplitter(
         separator="\n",
-        chunk_size=500,
-        chunk_overlap=100,
+        chunk_size=400,
+        chunk_overlap=50,
         length_function=len
     )
     chunks = text_splitter.split_text(text)
@@ -32,25 +34,34 @@ def get_text_chunks(text):
 
 
 def get_vectorstore(text_chunks):
-    embeddings = OpenAIEmbeddings()
-    # embeddings = HuggingFaceEmbeddings(
-    #     model_name="sentence-transformers/all-MiniLM-L6-v2")
+    # embeddings = OpenAIEmbeddings()
+    embeddings = HuggingFaceEmbeddings(
+        model_name="sentence-transformers/all-MiniLM-L6-v2")
     vectorstore = FAISS.from_texts(texts=text_chunks, embedding=embeddings)
     return vectorstore
 
 
-def get_conversation_chain(vectorstore):
-    llm = ChatOpenAI()
-    # llm = HuggingFacePipeline.from_model_id(
-    #     model_id="lmsys/vicuna-7b-v1.3",
-    #     task="text-generation",
-    #     model_kwargs={"temperature": 0.01},
-    # )
+def get_conversation_chain_old(vectorstore):
+    # llm = ChatOpenAI()
+    llm = HuggingFacePipeline.from_model_id(
+        model_id="mistralai/Mistral-7B-Instruct-v0.2",
+        task="text-generation",
+        model_kwargs={
+            "torch_dtype": "auto",
+            "device_map": "auto",
+        },
+        pipeline_kwargs={
+            "temperature": 0.01,
+            "max_new_tokens": 512,
+            "do_sample": True,
+            "return_full_text": False
+        },
+    )
     # llm = LlamaCpp(
     #     model_path="models/llama-2-7b-chat.ggmlv3.q4_1.bin",  n_ctx=1024, n_batch=512)
 
     memory = ConversationBufferMemory(
-        memory_key='chat_history', return_messages=True)
+        memory_key='chat_history', return_messages=False, output_key='answer')
     conversation_chain = ConversationalRetrievalChain.from_llm(
         llm=llm,
         retriever=vectorstore.as_retriever(
@@ -60,7 +71,33 @@ def get_conversation_chain(vectorstore):
     return conversation_chain
 
 
-def handle_userinput(user_question):
+def get_conversation_chain(vectorstore):
+    # llm = ChatOpenAI(temperature=0.01)
+    # llm = HuggingFacePipeline.from_model_id(
+    #     model_id="google/flan-t5-large",
+    #     task="text2text-generation",
+    #     pipeline_kwargs={
+    #         "max_new_tokens": 512,
+    #     },
+    # )
+    llm = ChatGroq(
+        model_name="llama-3.1-8b-instant",
+        temperature=0.01,
+    )
+
+    memory = ConversationBufferMemory(
+        memory_key='chat_history', return_messages=True, output_key='answer')
+    conversation_chain = ConversationalRetrievalChain.from_llm(
+        llm=llm,
+        retriever=vectorstore.as_retriever(
+            search_type="similarity", search_kwargs={"k": 4}),
+        memory=memory,
+        return_source_documents=True,
+    )
+    return conversation_chain
+
+
+def handle_userinput_old(user_question):
     response = st.session_state.conversation({'question': user_question})
     st.session_state.chat_history = response['chat_history']
 
@@ -72,6 +109,16 @@ def handle_userinput(user_question):
             st.write(bot_template.replace(
                 "{{MSG}}", message.content), unsafe_allow_html=True)
 
+def handle_userinput(user_question):
+    response = st.session_state.conversation({'question': user_question})
+    st.session_state.chat_history = response['chat_history']
+
+    for i, message in enumerate(st.session_state.chat_history):
+        content = message.content if hasattr(message, 'content') else message
+        if i % 2 == 0:
+            st.write(user_template.replace("{{MSG}}", content), unsafe_allow_html=True)
+        else:
+            st.write(bot_template.replace("{{MSG}}", content), unsafe_allow_html=True)
 
 def main():
     load_dotenv()
