@@ -41,7 +41,6 @@ def get_vectorstore(text_chunks):
 
 
 def get_conversation_chain(vectorstore):
-    # Option 1: Groq (free, fast, recommended)
     llm = ChatGroq(
         model_name="llama-3.1-8b-instant",
         temperature=0.01,
@@ -82,7 +81,7 @@ def main():
     if "chat_history" not in st.session_state:
         st.session_state.chat_history = None
 
-    st.header("Chat with PDFs :robot_face:")
+    st.header("Chat with PDFs")
     user_question = st.text_input("Ask questions about your documents:")
     if user_question:
         handle_userinput(user_question)
